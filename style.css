@@ -1,0 +1,71 @@
+/* Define Background */
+.stApp {
+    background-size: cover;
+    filter: brightness(1) saturate(1.5); /* Adjusted for higher brightness and saturation */
+}
+
+/* Define Buttons */
+/* Center the button horizontally in its container */
+div.stButton {
+    width: 100%;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: -30px; /* Adjust the margin-bottom as needed */
+}
+
+div.stButton > button {
+    background: linear-gradient(to right, #c89dc6, #a3a3de); /* Blue to Purple gradient */
+    color: #ffffff;
+    border: none; /* Optional: removes the border */
+    height: 50px; /* Larger button height */
+    width: 240px; /* Larger button width */
+    /* Adjust padding to ensure text fits if necessary */
+}
+
+/* Define heading */
+.custom-heading {
+    font-size: 50px; /* Larger font size */
+    font-weight: bold; /* Make the font bold */
+    color: rgba(255, 255, 255, 0.8); /* Translucent white */
+    text-align: left;
+    left: 50%; /* Center horizontally */
+    padding-left: 10px; /* A bit of padding from the left */
+    line-height: 1.1; /* Smaller line spacing */
+    margin-bottom: 220px; /* Larger space between heading and the button */
+    display: block; /* Ensure it's treated as a block for proper spacing */
+    max-width: 100%; /* Ensure it doesn't overflow the container */
+    word-wrap: break-word; /* Ensure long words do not overflow */
+}
+
+/* Define subheading */
+.custom-subheading {
+    position: fixed; /* or 'absolute' depending on your requirement */
+    top: 10%; /* Start 5px from the top */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust horizontal centering */
+    font-size: 25px; /* Larger font size */
+    color: rgba(0, 0, 0, 0.8); /* Translucent dark */
+    text-align: center;
+    display: block; /* Ensure it's treated as a block for proper spacing */
+    max-width: 100%; /* Ensure it doesn't overflow the container */
+    word-wrap: break-word; /* Ensure long words do not overflow */
+    z-index: 10; /* Ensure it's above other elements */
+}
+
+.white-block {
+    position: fixed; /* Changed from 'absolute' to 'fixed' to ensure it stays in place even when scrolling */
+    top: 0; /* This positions the block at the very top */
+    left: 0; /* Aligns the block to the left edge */
+    width: 100%; /* Ensures the block spans the full width of the viewport */
+    height: 150px; /* Sets the height of the block */
+    background-color: white; /* Makes the block white */
+    z-index: -10; /* lower */
+}
+
+.icon-button1 {
+    position: fixed; /* or 'absolute' depending on your requirement */
+    top: 0; /* Start 5px from the top */
+    left: 50%; /* Center horizontally */
+    z-index: 10; /* lower */
+}
