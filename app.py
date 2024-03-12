@@ -98,8 +98,8 @@ def create_group_page():
     )
 
     # Define the back button icon
-    back_icon_path = "/Users/yomaru/Desktop/TECHIN 510/510 Final/TECHIN510_Final_Project/icon/Back.png"
-    finish_icon_path = "/Users/yomaru/Desktop/TECHIN 510/510 Final/TECHIN510_Final_Project/icon/Finish.png"
+    back_icon_path = "/Users/yomaru/Desktop/TECHIN 510/510_Final2/TECHIN-510-FinalProject/icon/Back.png"
+    finish_icon_path = "/Users/yomaru/Desktop/TECHIN 510/510_Final2/TECHIN-510-FinalProject/icon/Finish.png"
 
     back_icon = encode_image(back_icon_path)
     finish_icon = encode_image(finish_icon_path)
@@ -181,7 +181,7 @@ def join_group_page():
 # Main function
 def main():
     add_custom_css()
-    add_bg_from_file("/Users/yomaru/Desktop/TECHIN 510/510 Final/TECHIN510_Final_Project/gradient/home-bg.png") 
+    add_bg_from_file("/Users/yomaru/Desktop/TECHIN 510/510_Final2/TECHIN-510-FinalProject/gradient/home-bg.png") 
     
     if 'page' not in st.session_state:
         st.session_state.page = 'home'
