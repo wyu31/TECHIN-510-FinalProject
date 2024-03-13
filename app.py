@@ -57,21 +57,26 @@ def select_or_create_group():
 
     # Buttons that look different from the default button in css
     def ChangeButtonColour(widget_label, font_color, background_color='transparent', border_style=None):
-        # Extend the JavaScript to conditionally apply a border style if provided
+        # Use 'let' for block scope in modern JavaScript
+        # Check for elements' existence before attempting to style them
+        # Use 'textContent' for better compatibility across browsers
         border_style_js = f"elements[i].style.border = '{border_style}';" if border_style else ""
         htmlstr = f"""
             <script>
-                var elements = window.parent.document.querySelectorAll('button');
-                for (var i = 0; i < elements.length; ++i) {{ 
-                    if (elements[i].innerText == '{widget_label}') {{ 
-                        elements[i].style.color ='{font_color}';
-                        elements[i].style.background = '{background_color}';
-                        {border_style_js}
+                document.addEventListener('DOMContentLoaded', (event) => {{
+                    let elements = window.parent.document.querySelectorAll('button');
+                    for (let i = 0; i < elements.length; ++i) {{
+                        if (elements[i].textContent.trim() == '{widget_label}') {{
+                            elements[i].style.color ='{font_color}';
+                            elements[i].style.background = '{background_color}';
+                            {border_style_js}
+                        }}
                     }}
-                }}
+                }});
             </script>
-            """
-        components.html(f"{htmlstr}", height=0, width=0)
+        """
+        components.html(htmlstr, height=0, width=0)
+
 
     ChangeButtonColour('Join a group', '#c89dc6', 'white', '2px solid #c89dc6') # Now includes border style
 
