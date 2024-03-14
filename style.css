@@ -11,7 +11,7 @@ div.stButton {
     text-align: center;
     margin-left: auto;
     margin-right: auto;
-    margin-bottom: -30px; /* Adjust the margin-bottom as needed */
+    margin-bottom: -35px; /* Adjust the margin-bottom as needed */
 }
 
 div.stButton > button {
@@ -23,6 +23,13 @@ div.stButton > button {
     /* Adjust padding to ensure text fits if necessary */
 }
 
+/* Change the font color to black on hover, focus, and active states */
+div.stButton > button:hover,
+div.stButton > button:focus,
+div.stButton > button:active {
+    color: #ebcadb !important; /* Force font color to black */
+}
+
 /* Define heading */
 .custom-heading {
     font-size: 50px; /* Larger font size */
@@ -32,7 +39,7 @@ div.stButton > button {
     left: 50%; /* Center horizontally */
     padding-left: 10px; /* A bit of padding from the left */
     line-height: 1.1; /* Smaller line spacing */
-    margin-bottom: 220px; /* Larger space between heading and the button */
+    margin-bottom: 160px; /* Larger space between heading and the button */
     display: block; /* Ensure it's treated as a block for proper spacing */
     max-width: 100%; /* Ensure it doesn't overflow the container */
     word-wrap: break-word; /* Ensure long words do not overflow */
@@ -45,8 +52,9 @@ div.stButton > button {
     left: 50%; /* Center horizontally */
     transform: translateX(-50%); /* Adjust horizontal centering */
     font-size: 25px; /* Larger font size */
-    color: rgba(0, 0, 0, 0.8); /* Translucent dark */
+    color: rgba(0, 0, 0, 0.7); /* Translucent dark */
     text-align: center;
+    margin-top: 15px;
     display: block; /* Ensure it's treated as a block for proper spacing */
     max-width: 100%; /* Ensure it doesn't overflow the container */
     word-wrap: break-word; /* Ensure long words do not overflow */
@@ -58,7 +66,7 @@ div.stButton > button {
     top: 0; /* This positions the block at the very top */
     left: 0; /* Aligns the block to the left edge */
     width: 100%; /* Ensures the block spans the full width of the viewport */
-    height: 150px; /* Sets the height of the block */
+    height: 160px; /* Sets the height of the block */
     background-color: white; /* Makes the block white */
     z-index: -10; /* lower */
 }
