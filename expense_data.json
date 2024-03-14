@@ -13,5 +13,10 @@
         "Group ID": "6009",
         "Group Name": "hiking",
         "File": "individual_group_info/hiking_expense_data.json"
+    },
+    {
+        "Group ID": "2645",
+        "Group Name": "cycling",
+        "File": "individual_group_info/cycling_expense_data.json"
     }
 ]

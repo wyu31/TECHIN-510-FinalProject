@@ -767,39 +767,48 @@ def data_visualization_page():
         # Load the data for the selected group
         data = load_json_data(selected_group)
         
-        # Display raw JSON data and calculate debts
-        if data:
+        # Check if data contains any dict entries with an "activity" key
+        has_expense_data = any(isinstance(entry, dict) and "activity" in entry for entry in data)
+        
+        if data and has_expense_data:
             # Display raw JSON data
             st.text("Raw JSON Data")
             st.json(data)
 
             # Calculate overall debts
             all_debts_df = calculate_debts(data)
-            
-            # Get unique list of all people involved in transactions
-            all_names = list(set(all_debts_df['Lender'].tolist() + all_debts_df['Borrower'].tolist()))
 
-            selected_name = st.selectbox("Select a name to filter", ["All"] + all_names)
+            # Before accessing 'Lender' and 'Borrower', check if the DataFrame is empty
+            if not all_debts_df.empty:
+                # Get unique list of all people involved in transactions
+                all_names = list(set(all_debts_df['Lender'].tolist() + all_debts_df['Borrower'].tolist()))
 
-            # Filter debts by selected name if not "All"
-            if selected_name != "All":
-                debts_df = all_debts_df[(all_debts_df['Lender'] == selected_name) | (all_debts_df['Borrower'] == selected_name)]
+                selected_name = st.selectbox("Select a name to filter", ["All"] + all_names)
+
+                # Filter debts by selected name if not "All"
+                if selected_name != "All":
+                    debts_df = all_debts_df[(all_debts_df['Lender'] == selected_name) | (all_debts_df['Borrower'] == selected_name)]
+                else:
+                    debts_df = all_debts_df
+
+                # Display the DataFrame
+                st.dataframe(debts_df)
+
+                # Additional feature: Summary of amounts owed by and to the selected name
+                if selected_name != "All":
+                    owed_by_selected = debts_df[debts_df['Borrower'] == selected_name]['Amount'].sum()
+                    owed_to_selected = debts_df[debts_df['Lender'] == selected_name]['Amount'].sum()
+                    st.write(f"Total amount owed by {selected_name}: {owed_by_selected}")
+                    st.write(f"Total amount owed to {selected_name}: {owed_to_selected}")
             else:
-                debts_df = all_debts_df
-
-            # Display the DataFrame
-            st.dataframe(debts_df)
-
-            # Additional feature: Summary of amounts owed by and to the selected name
-            if selected_name != "All":
-                owed_by_selected = debts_df[debts_df['Borrower'] == selected_name]['Amount'].sum()
-                owed_to_selected = debts_df[debts_df['Lender'] == selected_name]['Amount'].sum()
-                st.write(f"Total amount owed by {selected_name}: {owed_by_selected}")
-                st.write(f"Total amount owed to {selected_name}: {owed_to_selected}")
+                # Show message when there's no expense data to calculate debts from
+                st.error("Go Back to Add Info! The group hasn't added group expense information.")
         else:
-            st.error(f"No data available for the selected group: {selected_group}")
+            # Show message when the selected group has no data or no expense entries
+            st.error("Go Back to Add Info! The group hasn't added group expense information.")
     else:
         st.error("No groups found. Please create a group first.")
+
 
     # Save button to save the pasted JSON data
     if st.button("Go back view existing groups"):
