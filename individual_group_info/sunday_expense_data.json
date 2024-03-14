@@ -1,0 +1,41 @@
+[
+    {
+        "Group ID": "8593",
+        "Group Name": "sunday",
+        "Participants": [
+            "wanling",
+            "jackie",
+            "qianna"
+        ]
+    },
+    {
+        "activity": "dinner",
+        "activity_amount": 90,
+        "lender": "Jackie",
+        "borrower": [
+            "Wanling",
+            "Qianna"
+        ],
+        "amount": 30
+    },
+    {
+        "activity": "coffee",
+        "activity_amount": 60,
+        "lender": "Qianna",
+        "borrower": [
+            "Jackie",
+            "Wanling"
+        ],
+        "amount": 20
+    },
+    {
+        "activity": "Uber ride",
+        "activity_amount": 30,
+        "lender": "Wanling",
+        "borrower": [
+            "Jackie",
+            "Qianna"
+        ],
+        "amount": 10
+    }
+]

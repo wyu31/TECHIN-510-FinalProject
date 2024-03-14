@@ -1,22 +1,28 @@
+from openai import OpenAI
+import openai
+from dotenv import load_dotenv
+import os
+
 import streamlit as st
 import base64
 from st_clickable_images import clickable_images
 import streamlit.components.v1 as components
 from streamlit_float import *
-from db import get_group_ids, get_group_member_ids, add_expense
 
-
-import os
+import re
 import pandas as pd
 import random
-import openai
 import sqlite3
-import json
 import psycopg2
+import json
 from dotenv import load_dotenv
-from llama_index.core import VectorStoreIndex
-from llama_index.llms.openai import OpenAI
-from openai import OpenAI
+from collections import defaultdict
+from decimal import Decimal
+
+
+
+load_dotenv()
+openai_api_key=os.getenv("OPENAI_API_KEY")
 
 # Page Format Setting
 st.set_page_config(page_title="OttyMool", page_icon="🦦", layout="centered")
@@ -43,10 +49,10 @@ def add_bg_from_file(image_path):
 
 # Page 1 - Home Page
 def select_or_create_group():
-    st.markdown("<div class='custom-heading'>Choose a Group to Manage Recording Expenses</div>", unsafe_allow_html=True)
+    st.markdown("<div class='custom-heading'>Choose a Group to Manage Group Expenses</div>", unsafe_allow_html=True)
     if st.button("Create a new group"):
         st.session_state.page = 'create_group'
-        st.experimental_rerun()
+        st.rerun()
 
     # Buttons that look different from the default button in css
     def ChangeButtonColour(widget_label, font_color, background_color='transparent', border_style=None):
@@ -70,17 +76,15 @@ def select_or_create_group():
         """
         components.html(htmlstr, height=0, width=0)
 
-    ChangeButtonColour('Join a new group', 'white', '#b4aedf')
-    
-    if st.button("Join a new group", key ='b2'):
-        st.session_state.page = 'join_group'
-        st.experimental_rerun()
-
-    ChangeButtonColour('View existing groups', '#c89dc6', 'white', '2px solid #c89dc6') # Now includes border style
-
+    ChangeButtonColour('View existing groups', 'white', '#b4aedf') 
     if st.button("View existing groups", key ='b3'):
         st.session_state.page = 'show_group'
-        st.experimental_rerun()
+        st.rerun()
+
+    ChangeButtonColour('Chat with AI accountant', '#c89dc6', 'white', '2px solid #c89dc6') # Now includes border style
+    if st.button("Chat with AI accountant", key ='b2'):
+        st.session_state.page = 'chat_and_process_expenses'
+        st.rerun()
 
 # Page 2 - Create Group & Participants in Json
 def create_group(group_name=""):
@@ -104,36 +108,55 @@ def create_group(group_name=""):
 
 
 # Function to save group name and participants to JSON, and generate a random 4-digit group ID
-def save_data_to_json(group_name, participants):
-    filename = 'expense_data.json'
-    data = []
+def save_data_to_individual_json(group_name, participants):
+    # Create the directory if it doesn't exist
+    directory = "individual_group_info"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-    # Check if the JSON file exists and read its content
-    if os.path.exists(filename):
-        with open(filename, 'r') as file:
-            data = json.load(file)
-        existing_ids = {item['Group ID'] for item in data}
+    # Generate unique ID for the group and prepare the filename for individual group file
+    filename = os.path.join(directory, f"{group_name}_expense_data.json")
+    central_filename = 'expense_data.json'  # This file maintains a list of all groups
+
+    # Load or initialize the central data list
+    if os.path.exists(central_filename):
+        with open(central_filename, 'r') as file:
+            central_data = json.load(file)
     else:
-        existing_ids = set()
+        central_data = []
 
-    # Generate a new unique group_id
-    group_id = None
-    while group_id is None or group_id in existing_ids:
+    # Generate a unique ID for the new group
+    existing_ids = {item['Group ID'] for item in central_data}
+    group_id = '{:04d}'.format(random.randint(0, 9999))
+    while group_id in existing_ids:
         group_id = '{:04d}'.format(random.randint(0, 9999))
 
-    # Now we are sure group_id is set, proceed to use it
-    new_data = {
+    # Check if the group already exists in the central file
+    if any(item['Group Name'] == group_name for item in central_data):
+        st.error(f"Group '{group_name}' already exists.")
+        return None
+
+    # Prepare data for individual group file
+    group_data = {
         'Group ID': group_id,
         'Group Name': group_name,
         'Participants': participants,
     }
-    data.append(new_data)
 
-    # Write updated data to JSON file
+    # Save individual group data
     with open(filename, 'w') as file:
-        json.dump(data, file, indent=4)
-    
+        json.dump(group_data, file, indent=4)
+
+    # Update the central data list
+    central_data.append({'Group ID': group_id, 'Group Name': group_name, 'File': filename})
+
+    # Save the updated central data list
+    with open(central_filename, 'w') as file:
+        json.dump(central_data, file, indent=4)
+
+    st.success(f"Group '{group_name}' created with ID {group_id}.")
     return group_id
+
 
 def create_group_page():
 # Insert custom CSS to reduce black space at the top
@@ -211,11 +234,11 @@ def create_group_page():
 
     if clicked == 0:
         st.session_state.page = 'home'
-        st.experimental_rerun()
+        st.rerun()
     
     if clicked2 == 0:
         st.session_state.page = 'show_group'
-        st.experimental_rerun()
+        st.rerun()
 
     st.text("")
     
@@ -235,8 +258,14 @@ def create_group_page():
         else:
             st.warning("Please enter a group name.")
 
-    if st.button("Add a Group"):
-        handle_add_group()
+    # Placeholder
+    for _ in range(2):  # Adjust the range for more or fewer spaces
+        st.text("")
+
+    if st.button("Add a group"):
+        if handle_add_group():
+            # Insert new group data into the SQL database
+            add_group_to_db(group_name, st.session_state['participants'])
 
     # Use a custom HTML block with inline styling for larger space
     st.markdown("""
@@ -245,8 +274,30 @@ def create_group_page():
 
     # Add Participant Name
     new_participant = st.text_input("Add Participant's Name", key='new_participant')
+    
+    def ChangeButtonColour(widget_label, font_color, background_color='transparent', border_style=None):
+        # Use 'let' for block scope in modern JavaScript
+        # Check for elements' existence before attempting to style them
+        # Use 'textContent' for better compatibility across browsers
+        border_style_js = f"elements[i].style.border = '{border_style}';" if border_style else ""
+        htmlstr = f"""
+            <script>
+                document.addEventListener('DOMContentLoaded', (event) => {{
+                    let elements = window.parent.document.querySelectorAll('button');
+                    for (let i = 0; i < elements.length; ++i) {{
+                        if (elements[i].textContent.trim() == '{widget_label}') {{
+                            elements[i].style.color ='{font_color}';
+                            elements[i].style.background = '{background_color}';
+                            {border_style_js}
+                        }}
+                    }}
+                }});
+            </script>
+        """
+        components.html(htmlstr, height=0, width=0)
 
-    if st.button("Add Participant", key='add_participant') and new_participant:
+    ChangeButtonColour('Add a participant', 'white', '#b4aedf') 
+    if st.button("Add a participant", key='add_participant') and new_participant:
         if new_participant not in st.session_state['participants']:
             st.session_state['participants'].append(new_participant)
             st.success(f"Participant '{new_participant}' added.")            
@@ -257,17 +308,18 @@ def create_group_page():
     if 'participants' in st.session_state:
         for idx, participant in enumerate(st.session_state['participants']):
             st.markdown("---")  # Separation line for clarity
-            col1, col2 = st.columns([4, 1])
+            col1, col2 = st.columns([1,1])
             with col1:
                 st.write(participant)
+
             with col2:
                 if st.button('Delete', key=f'delete_{idx}'):
                     st.session_state['participants'].remove(participant)
     
-    # Use a custom HTML block with inline styling for larger space
-    st.markdown("""
-        <div style='margin-bottom: 10px;'><!-- Space Block --></div>
-    """, unsafe_allow_html=True)
+
+    # Placeholder
+    for _ in range(3):  # Adjust the range for more or fewer spaces
+        st.text("")
 
     # Buttons that look different from the default button in css
     def ChangeButtonColour(widget_label, font_color, background_color='transparent', border_style=None):
@@ -291,7 +343,7 @@ def create_group_page():
         """
         components.html(htmlstr, height=0, width=0)
 
-    ChangeButtonColour('Make Sure', '#c89dc6', 'white', '2px solid #c89dc6') # Now includes border style
+    ChangeButtonColour('Make sure', '#c89dc6', 'white', '2px solid #c89dc6') # Now includes border style
     
     # Use a custom HTML block with inline styling for larger space
     st.markdown("""
@@ -299,11 +351,11 @@ def create_group_page():
     """, unsafe_allow_html=True)
 
 # Ensuring Button
-    if st.button("Make Sure", key='finish_adding'):
+    if st.button("Make sure", key='finish_adding'):
         if group_name and 'participants' in st.session_state and st.session_state['participants']:
             # This block remains unchanged, save the data to JSON
             if group_name in st.session_state.groups:
-                group_id = save_data_to_json(group_name, st.session_state['participants'])
+                group_id = save_data_to_individual_json(group_name, st.session_state['participants'])
                 # After saving, display group info instead of navigating away
                 st.success(f"Group '{group_name}' saved with ID {group_id}.")
                 # Display the saved group information
@@ -320,8 +372,7 @@ def create_group_page():
 
 # Page 3 - Show Groups
 def show_group_page():
-
-# Insert custom CSS to reduce black space at the top
+    # Insert custom CSS to reduce black space at the top
     st.markdown(
         """
             <style>
@@ -362,103 +413,433 @@ def show_group_page():
             },
         ) == 0:
             st.session_state.page = 'home'
-            st.experimental_rerun()
+            st.rerun()
+
+    # Placeholder
+    for _ in range(4):  # Adjust the range for more or fewer spaces
+        st.text("")
+
+    # Get all groups
+    directory = "individual_group_info"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    group_files = os.listdir(directory)
+
+    if not group_files:
+        st.error("No groups found. Please create a group first.")
+        return
+
+    # Dropdown to select a group
+    group_names = [file_name.split('_')[0] for file_name in group_files if file_name.endswith("_expense_data.json")]
+    selected_group = st.selectbox('Select a group to view or edit', group_names)
+
+    # Once a group is selected, show the participants and options
+    if selected_group:
+        file_path = os.path.join(directory, f"{selected_group}_expense_data.json")
+        with open(file_path, 'r') as file:
+            group_data = json.load(file)
+
+        # Adjusted section: Handling group_data as a list or dictionary
+        if isinstance(group_data, list):
+            if group_data:  # Check if the list is not empty
+                group_data = group_data[0]  # Use the first item
+            else:
+                st.error("No group data found in the selected file.")
+                return
+        
+        participants = group_data.get('Participants', [])
+        group_id = group_data.get('Group ID', 'Unknown ID')
+
+        st.subheader(f"Group ID: {group_id} - {selected_group}")
+        st.write("Participants:")
+
+        # List the participants
+        if participants:
+            for participant in participants:
+                st.markdown(f"- {participant}")
+        else:
+            st.write("No participants found.")
+
+        # Dropdown for selecting a participant to delete
+        selected_participant = st.selectbox("Select a participant to delete", options=[None] + participants)
+
+        # Delete button
+        if st.button("Delete selected participant") and selected_participant:
+            # Remove the selected participant from the list
+            participants.remove(selected_participant)
+            # Update the group_data with the modified participants list
+            group_data['Participants'] = participants
+            # Write the updated data back to the file
+            with open(file_path, 'w') as file:
+                json.dump(group_data, file, indent=4)
+            st.success(f"Participant {selected_participant} deleted successfully.")
+            st.rerun()
+
+        # Buttons that look different from the default button in css
+        def ChangeButtonColour(widget_label, font_color, background_color='transparent', border_style=None):
+            # Use 'let' for block scope in modern JavaScript
+            # Check for elements' existence before attempting to style them
+            # Use 'textContent' for better compatibility across browsers
+            border_style_js = f"elements[i].style.border = '{border_style}';" if border_style else ""
+            htmlstr = f"""
+                <script>
+                    document.addEventListener('DOMContentLoaded', (event) => {{
+                        let elements = window.parent.document.querySelectorAll('button');
+                        for (let i = 0; i < elements.length; ++i) {{
+                            if (elements[i].textContent.trim() == '{widget_label}') {{
+                                elements[i].style.color ='{font_color}';
+                                elements[i].style.background = '{background_color}';
+                                {border_style_js}
+                            }}
+                        }}
+                    }});
+                </script>
+            """
+            components.html(htmlstr, height=0, width=0)
+
+        ChangeButtonColour(f"Delete group {selected_group}", 'white', '#b4aedf')         
+        # Button to delete the group
+        if st.button(f"Delete group {selected_group}", key=f"delete_group_{group_id}"):
+            os.remove(file_path)  # Delete the group file
+            st.success(f"Group {selected_group} deleted successfully.")
+            st.rerun()  # Refresh the page to show the update
+        
+        ChangeButtonColour("Data visualization", '#c89dc6', 'white', '2px solid #c89dc6') # Now includes border style
+        if st.button("Data visualization", key ='b6'):
+            st.session_state.page = 'data_visualization'
+            st.rerun()
+
+# Page 4 - Chat with AI Account
+def get_group_names():
+    directory = "individual_group_info"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    group_files = os.listdir(directory)
+    return [file.replace('_expense_data.json', '') for file in group_files]
+
+def save_expense_to_group_file(group_name, expense_data):
+    directory = "individual_group_info"
+    filename = os.path.join(directory, f"{group_name}_expense_data.json")
     
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    try:
+        data = []
+        if os.path.exists(filename):
+            with open(filename, 'r') as file:
+                data = json.load(file)
+                if not isinstance(data, list):
+                    raise ValueError(f"Data in {filename} is not a list")
 
-    # Path to the JSON file with the groups data
-    filename = 'expense_data.json'
+        data.append(expense_data)
+        with open(filename, 'w') as file:
+            json.dump(data, file, indent=4)
+            
+        st.success(f"Expense data saved to {filename} successfully.")
+        
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
 
-    # Check if the JSON file exists and read its content
+def chat_and_process_expenses_page():
+    st.title("🤖 Accounting Robot")
+    
+    load_dotenv()
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+
+    # Add a dropdown for users to choose the group
+    group_names = get_group_names()  # Ensure this function is defined and returns a list of group names
+    selected_group = st.selectbox("Choose your group", group_names)
+
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = [{"role": "assistant", "content": "Hello! Try ask me questions like: We had dinner for $90 paid by Jackie split among Jackie, Wanling, Qianna"}]
+
+    for msg in st.session_state.messages:
+        st.chat_message(msg["role"]).write(msg["content"])
+
+    if prompt := st.chat_input("e.g., We had dinner for $90 paid by Jackie split among Jackie, Wanling, Qianna):"):
+        if not openai_api_key:
+            st.info("Please add your OpenAI API key to continue.")
+            st.stop()
+
+        client = OpenAI(api_key=openai_api_key, base_url=os.getenv("OPENAI_API_BASE"))
+
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.chat_message("user").write(prompt)
+        
+        # Define an accounting-specific system prompt
+        accounting_prompt = {
+            "role": "system",
+            "content":'''
+            You are an advanced accounting assistant. 
+            Provide accurate, detailed, and professional financial advice.
+            Also print the json format like the example:
+            We had dinner for $90 paid by Jackie split among Jackie, Wanling, Qiana, 
+            calculate the money owed, and analyze the money spliting for users.
+            <text> Wanling, Jackie, and I went to lunch and spent 100 dollars, we want to split it equally. Jackie paid first. 
+            </text> <example> { "activity": "lunch", "activity_amount": 90, "lender": "Jackie", 
+            "borrower": "Wanling","Qianna", "amount": 30 } </example>'
+            and output in JSON format for the dinner activity
+            json_string = """
+            {
+                "activity": "dinner",
+                "activity_amount": 90,
+                "lender": "Jackie",
+                "borrower": ["Wanling", "Qianna"],
+                "amount": 30
+            }
+            """
+            '''
+        }
+        
+        # Include the accounting prompt along with user messages
+        messages_with_context = [accounting_prompt] + st.session_state.messages
+        
+        # Call the OpenAI API with the updated session state as the prompt
+        response = client.chat.completions.create(model="gpt-3.5-turbo-0125", messages=messages_with_context)
+        
+        # Extract the response message and append it to the session state
+        msg = response.choices[0].message.content
+
+        # Parse the response to extract JSON output
+        try:
+            json_output = json.loads(msg)
+            if isinstance(json_output, dict):
+                st.session_state.messages.append({"role": "assistant", "content": json.dumps(json_output, indent=4)})
+                st.chat_message("assistant").write(json.dumps(json_output, indent=4))
+                # Add box for copying JSON info
+                st.text_area("Copy JSON info:", value=json.dumps(json_output, indent=4), height=200)
+            else:
+                st.session_state.messages.append({"role": "assistant", "content": "Unable to generate JSON output for this request."})
+                st.chat_message("assistant").write("Unable to generate JSON output for this request.")
+        except json.JSONDecodeError:
+            st.session_state.messages.append({"role": "assistant", "content": msg})
+            st.chat_message("assistant").write(msg)
+
+    # Add a text area for users to paste the JSON data
+    json_input = st.text_area("Paste and check the generated JSON data here:", height=150)
+    
+    
+    # Save button to save the pasted JSON data
+    if st.button("Save JSON"):
+        if not json_input.strip():  # Check if the json_input is empty or only whitespace
+            st.error("No JSON data to save. Please paste the JSON data into the text area.")
+            return  # Exit the function to avoid further processing
+
+        try:
+            expense_data = json.loads(json_input)  # Parse the JSON input from the text area
+            save_expense_to_group_file(selected_group, expense_data)  # Call save function with parsed JSON
+            st.success("Expense saved successfully.")
+        except json.JSONDecodeError as e:
+            st.error(f"An error occurred while parsing the JSON input: {e}")
+        except Exception as e:
+            st.error(f"An error occurred while saving the JSON data: {e}")
+
+    def ChangeButtonColour(widget_label, font_color, background_color='transparent', border_style=None):
+        # Use 'let' for block scope in modern JavaScript
+        # Check for elements' existence before attempting to style them
+        # Use 'textContent' for better compatibility across browsers
+        border_style_js = f"elements[i].style.border = '{border_style}';" if border_style else ""
+        htmlstr = f"""
+            <script>
+                document.addEventListener('DOMContentLoaded', (event) => {{
+                    let elements = window.parent.document.querySelectorAll('button');
+                    for (let i = 0; i < elements.length; ++i) {{
+                        if (elements[i].textContent.trim() == '{widget_label}') {{
+                            elements[i].style.color ='{font_color}';
+                            elements[i].style.background = '{background_color}';
+                            {border_style_js}
+                        }}
+                    }}
+                }});
+            </script>
+        """
+        components.html(htmlstr, height=0, width=0)
+
+    ChangeButtonColour('Data visualization', 'white', '#b4aedf') 
+    if st.button("Data visualization", key ='b4'):
+        st.session_state.page = 'data_visualization'
+        st.rerun()
+
+    ChangeButtonColour('Go back home', '#c89dc6', 'white', '2px solid #c89dc6') # Now includes border style
+    if st.button("Go back home", key ='b5'):
+        st.session_state.page = 'home'
+        st.rerun()
+
+# Ensure to define save_expense_to_group_file to accept the new parsed_json parameter
+def save_expense_to_group_file(group_name, expense_data):
+    directory = "individual_group_info"
+    filename = os.path.join(directory, f"{group_name}_expense_data.json")
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    try:
+        # Initialize data as an empty list or load existing data
+        data = []
+
+        if os.path.exists(filename):
+            with open(filename, 'r') as file:
+                # Load the existing data, expecting it to be a list
+                file_data = json.load(file)
+                if isinstance(file_data, list):
+                    data = file_data  # Use existing data if it's a list
+                # If the data is a dictionary, start a new list with this dictionary
+                elif isinstance(file_data, dict):
+                    data = [file_data]
+                else:
+                    raise ValueError(f"Data in {filename} is neither a list nor a dictionary")
+
+        # Append the new expense data and save back to the file
+        data.append(expense_data)
+        with open(filename, 'w') as file:
+            json.dump(data, file, indent=4)
+
+        st.success(f"Expense data saved to {filename} successfully.")
+
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+
+
+# Page 5 - Data Visualization Page
+# Function to get group names based on the available JSON files
+def get_group_names(directory="individual_group_info"):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        return []
+    return [f for f in os.listdir(directory) if f.endswith('_expense_data.json')]
+
+# Function to load JSON data
+def load_json_data(group_name, directory="individual_group_info"):
+    filename = os.path.join(directory, f"{group_name}_expense_data.json")
     if os.path.exists(filename):
         with open(filename, 'r') as file:
-            groups_data = json.load(file)
+            return json.load(file)
+    else:
+        return []
 
-        # Prepare a container for deletion requests
-        participant_to_delete = None
-        group_to_delete = None
+# Function to get group names based on the available JSON files
+def get_group_names(directory="individual_group_info"):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        return []
+    return [f.replace('_expense_data.json', '') for f in os.listdir(directory) if f.endswith('_expense_data.json')]
 
-        # Placeholder
-        for _ in range(4):  # Adjust the range for more or fewer spaces
-            st.text("")
+# Function to load JSON data
+def load_json_data(group_name, directory="individual_group_info"):
+    filename = os.path.join(directory, f"{group_name}_expense_data.json")
+    if os.path.exists(filename):
+        with open(filename, 'r') as file:
+            return json.load(file)
+    else:
+        return []
 
-        # Iterate over each group and display its content
-        for group in groups_data:
-            group_id = group['Group ID']
-            group_name = group['Group Name']
-            participants = group['Participants']
+# Function to calculate debts
+def calculate_debts(data):
+    debts = defaultdict(Decimal)
+    activity_info = {}
+    for entry in data:
+        if 'activity' in entry:
+            amount = Decimal(entry['amount'])
+            lender = entry['lender']
+            activity = entry['activity']
+            for borrower in entry['borrower']:
+                if borrower != lender:  # Ignore if borrower is also the lender
+                    key = (borrower, lender)
+                    debts[key] += amount
+                    activity_info[key] = activity
 
-            with st.expander(f"Group ID: {group_id} - {group_name}"):
-                st.write("Participants:")
-                for idx, participant in enumerate(participants):
-                    # Create a unique key for each participant button using both group ID and index
-                    unique_key = f"delete_participant_{group_id}_{idx}"
-                    if st.button(f"Delete {participant}", key=unique_key):
-                        participant_to_delete = (group_id, participant)
-                
-                # Add a delete group button
-                delete_group_key = f"delete_group_{group_id}"
-                if st.button(f"Delete Group: {group_name}", key=delete_group_key):
-                    group_to_delete = group_id
+    # Prepare data for DataFrame
+    debts_list = [
+        {'Lender': lender, 'Borrower': borrower, 'Amount': amt, 'Activity': activity_info[(borrower, lender)]}
+        for (borrower, lender), amt in debts.items()
+    ]
+    return pd.DataFrame(debts_list)
 
-        # Handle participant deletion
-        if participant_to_delete:
-            for group in groups_data:
-                if group['Group ID'] == participant_to_delete[0]:
-                    group['Participants'].remove(participant_to_delete[1])
-                    break
-            with open(filename, 'w') as file:
-                json.dump(groups_data, file, indent=4)
-            st.experimental_rerun()
+def data_visualization_page():
+    st.title("📝 Group Expense Visualization")
+
+    # Dropdown to select the group
+    group_names = get_group_names()
+    selected_group = st.selectbox("Select a group", group_names)
+
+    if selected_group:
+        # Load the data for the selected group
+        data = load_json_data(selected_group)
         
-        # Handle group deletion
-        if group_to_delete:
-            groups_data = [group for group in groups_data if group['Group ID'] != group_to_delete]
-            with open(filename, 'w') as file:
-                json.dump(groups_data, file, indent=4)
-            st.experimental_rerun()
+        # Display raw JSON data and calculate debts
+        if data:
+            # Display raw JSON data
+            st.text("Raw JSON Data")
+            st.json(data)
 
+            # Calculate overall debts
+            all_debts_df = calculate_debts(data)
+            
+            # Get unique list of all people involved in transactions
+            all_names = list(set(all_debts_df['Lender'].tolist() + all_debts_df['Borrower'].tolist()))
+
+            selected_name = st.selectbox("Select a name to filter", ["All"] + all_names)
+
+            # Filter debts by selected name if not "All"
+            if selected_name != "All":
+                debts_df = all_debts_df[(all_debts_df['Lender'] == selected_name) | (all_debts_df['Borrower'] == selected_name)]
+            else:
+                debts_df = all_debts_df
+
+            # Display the DataFrame
+            st.dataframe(debts_df)
+
+            # Additional feature: Summary of amounts owed by and to the selected name
+            if selected_name != "All":
+                owed_by_selected = debts_df[debts_df['Borrower'] == selected_name]['Amount'].sum()
+                owed_to_selected = debts_df[debts_df['Lender'] == selected_name]['Amount'].sum()
+                st.write(f"Total amount owed by {selected_name}: {owed_by_selected}")
+                st.write(f"Total amount owed to {selected_name}: {owed_to_selected}")
+        else:
+            st.error(f"No data available for the selected group: {selected_group}")
     else:
         st.error("No groups found. Please create a group first.")
 
-    # Iterate over each group and display its content
-    for group in groups_data:
-        group_id = group['Group ID']
-        group_name = group['Group Name']
-        # Existing code for displaying group...
+    # Save button to save the pasted JSON data
+    if st.button("Go back view existing groups"):
+        st.session_state.page = 'show_group'
+        st.rerun()
 
-        # Add a button for navigating to manage expenses for the group
-        if st.button(f"Manage Expenses for {group_name}", key=f"manage_{group_id}"):
-            st.session_state.selected_group_id = group_id  # Set selected group ID in session state
-            st.session_state.page = 'manage_expenses'  # Change page state to trigger navigation
-            st.experimental_rerun()
+    def ChangeButtonColour(widget_label, font_color, background_color='transparent', border_style=None):
+        # Use 'let' for block scope in modern JavaScript
+        # Check for elements' existence before attempting to style them
+        # Use 'textContent' for better compatibility across browsers
+        border_style_js = f"elements[i].style.border = '{border_style}';" if border_style else ""
+        htmlstr = f"""
+            <script>
+                document.addEventListener('DOMContentLoaded', (event) => {{
+                    let elements = window.parent.document.querySelectorAll('button');
+                    for (let i = 0; i < elements.length; ++i) {{
+                        if (elements[i].textContent.trim() == '{widget_label}') {{
+                            elements[i].style.color ='{font_color}';
+                            elements[i].style.background = '{background_color}';
+                            {border_style_js}
+                        }}
+                    }}
+                }});
+            </script>
+        """
+        components.html(htmlstr, height=0, width=0)
 
-# Page 4 - Manage Data with SQL DataBase
-def manage_expenses_page():
-    st.title("Manage Expenses")
-    # Fetch group options from the database
-    group_options = get_group_ids()
-    if not group_options:
-        st.warning("No groups available. Please create a group first.")
-        return
+    # Placeholder
+    for _ in range(4):  # Adjust the range for more or fewer spaces
+        st.text("")
     
-    group_ids, group_names = zip(*group_options) if group_options else ([], [])
-    selected_group_id = st.selectbox("Select Group", options=group_names, index=0 if group_options else -1)
-    
-    if not group_options:
-        return  # Exit if there are no groups to manage expenses for
+    ChangeButtonColour('Go back AI accountant', 'white', '#b4aedf') 
+    if st.button("Go back AI accountant", key ='b7'):
+        st.session_state.page = 'chat_and_process_expenses'
+        st.rerun()
 
-    item = st.text_input("Item")
-    amount = st.number_input("Amount", min_value=0.0, format="%.2f")
-    member_options = get_group_member_ids(selected_group_id)
-
-    if member_options:
-        member_ids, member_names = zip(*member_options)
-        paid_by = st.selectbox("Who Paid?", options=member_names)
-        if st.button("Add Expense"):
-            add_expense(selected_group_id, item, amount, paid_by)
-            st.success("Expense added successfully")
-    else:
-        st.warning("No members found in this group.")
+    ChangeButtonColour('Go back home', '#c89dc6', 'white', '2px solid #c89dc6') # Now includes border style
+    if st.button("Go back home", key ='b8'):
+        st.session_state.page = 'home'
+        st.rerun()
 
 # Main function
 def main():
@@ -478,8 +859,10 @@ def main():
         create_group_page()
     elif st.session_state.page == 'show_group':
         show_group_page() 
-    elif st.session_state.page == 'manage_expenses':
-        manage_expenses_page()
+    elif st.session_state.page == 'chat_and_process_expenses':
+        chat_and_process_expenses_page()
+    elif st.session_state.page == 'data_visualization':
+        data_visualization_page()
 
 if __name__ == "__main__":
     main()

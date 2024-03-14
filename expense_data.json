@@ -1,17 +1,17 @@
 [
     {
-        "Group ID": "4627",
-        "Group Name": "lucky",
-        "Participants": [
-            "jackie"
-        ]
+        "Group ID": "7585",
+        "Group Name": "banana",
+        "File": "individual_group_info/banana_expense_data.json"
     },
     {
-        "Group ID": "1720",
-        "Group Name": "rabbit",
-        "Participants": [
-            "wanling",
-            "jackie"
-        ]
+        "Group ID": "8593",
+        "Group Name": "sunday",
+        "File": "individual_group_info/sunday_expense_data.json"
+    },
+    {
+        "Group ID": "6009",
+        "Group Name": "hiking",
+        "File": "individual_group_info/hiking_expense_data.json"
     }
 ]

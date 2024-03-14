@@ -1,0 +1,20 @@
+[
+    {
+        "Group ID": "6009",
+        "Group Name": "hiking",
+        "Participants": [
+            "wanling",
+            "qianna"
+        ]
+    },
+    {
+        "activity": "dinner",
+        "activity_amount": 70,
+        "lender": "Wanling",
+        "borrower": [
+            "Wanling",
+            "Qianna"
+        ],
+        "amount": 35
+    }
+]
