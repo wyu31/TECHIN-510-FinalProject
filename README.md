@@ -55,8 +55,8 @@ User Interface Design: Creating an intuitive and responsive interface that accom
 Scalability: Designing the system to handle a growing number of users and transactions efficiently.
 In order to define richer and free visual effects, we use CSS, but CSS is not so formal and stable compared to the basic components in stremlit, and it requires multiple debugging to achieve the ideal effect.
 
-### Detailed Takeaways
-```st.experimental_rerun```
-```from st_clickable_images import clickable_images```
-```import streamlit.components.v1 as components```
-```from streamlit_float import *```
+### Detailed New Takeaways
+1. ```st.experimental_rerun```  
+2. ```from st_clickable_images import clickable_images```  
+3. ```import streamlit.components.v1 as components```  
+4. ```from streamlit_float import *```  

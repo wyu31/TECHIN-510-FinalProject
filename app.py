@@ -3,6 +3,8 @@ import base64
 from st_clickable_images import clickable_images
 import streamlit.components.v1 as components
 from streamlit_float import *
+from db import get_group_ids, get_group_member_ids, add_expense
+
 
 import os
 import pandas as pd
@@ -15,7 +17,6 @@ from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.openai import OpenAI
 from openai import OpenAI
-from db import get_db_conn
 
 # Page Format Setting
 st.set_page_config(page_title="OttyMool", page_icon="🦦", layout="centered")
@@ -39,40 +40,6 @@ def add_bg_from_file(image_path):
         }}
         </style>
         """, unsafe_allow_html=True)
-
-# Data Setting
-def get_group_ids():
-    """
-    Fetches group ids and names from the database.
-    Returns a list of tuples (group_id, group_name).
-    """
-    with get_db_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT group_id, group_name FROM groups")
-            groups = cur.fetchall()
-    return groups
-
-def get_group_member_ids(group_id):
-    """
-    Fetches member ids and names for a given group from the database.
-    Returns a list of tuples (member_id, member_name).
-    """
-    with get_db_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT member_id, member_name FROM members WHERE group_id = %s", (group_id,))
-            members = cur.fetchall()
-    return members
-
-def add_expense(group_id, item, amount, paid_by):
-    """
-    Adds an expense to the database.
-    """
-    with get_db_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO expenses (group_id, item, amount, paid_by)
-                VALUES (%s, %s, %s, %s)
-            """, (group_id, item, amount, paid_by))
 
 # Page 1 - Home Page
 def select_or_create_group():
@@ -468,22 +435,30 @@ def show_group_page():
 # Page 4 - Manage Data with SQL DataBase
 def manage_expenses_page():
     st.title("Manage Expenses")
-    # Check if selected_group_id is set and use it to pre-select the group
+    # Fetch group options from the database
     group_options = get_group_ids()
-    group_ids, group_names = zip(*group_options)
-    group_id = st.selectbox("Select Group", options=group_names, index=group_ids.index(st.session_state.selected_group_id) if 'selected_group_id' in st.session_state else 0)
+    if not group_options:
+        st.warning("No groups available. Please create a group first.")
+        return
     
+    group_ids, group_names = zip(*group_options) if group_options else ([], [])
+    selected_group_id = st.selectbox("Select Group", options=group_names, index=0 if group_options else -1)
+    
+    if not group_options:
+        return  # Exit if there are no groups to manage expenses for
+
     item = st.text_input("Item")
     amount = st.number_input("Amount", min_value=0.0, format="%.2f")
-    # Assume a simplified structure where one member pays
-    member_options = get_group_member_ids(group_id)
-    member_ids, member_names = zip(*member_options)
-    paid_by = st.selectbox("Who Paid?", options=member_names)
-    
-    if st.button("Add Expense"):
-        payments = [{'member_id': m_id, 'amount_paid': amount if m_id == paid_by else 0, 'amount_owed': amount / len(member_options)} for m_id, m_name in member_options]
-        add_expense(group_id, item, amount, payments)
-        st.success("Expense added")
+    member_options = get_group_member_ids(selected_group_id)
+
+    if member_options:
+        member_ids, member_names = zip(*member_options)
+        paid_by = st.selectbox("Who Paid?", options=member_names)
+        if st.button("Add Expense"):
+            add_expense(selected_group_id, item, amount, paid_by)
+            st.success("Expense added successfully")
+    else:
+        st.warning("No members found in this group.")
 
 # Main function
 def main():
