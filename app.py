@@ -11,6 +11,7 @@ from streamlit_float import *
 
 import re
 import pandas as pd
+import builtins
 import random
 import sqlite3
 import psycopg2
@@ -18,6 +19,7 @@ import json
 from dotenv import load_dotenv
 from collections import defaultdict
 from decimal import Decimal
+
 
 
 
@@ -736,28 +738,30 @@ def load_json_data(group_name, directory="individual_group_info"):
 
 # Function to calculate debts
 def calculate_debts(data):
-    debts = defaultdict(Decimal)
-    activity_info = {}
+    debts = defaultdict(Decimal)  # Initialize a default dictionary for debts
+    activity_info = {}  # Initialize a dictionary to store activity info
     for entry in data:
         if 'activity' in entry:
-            amount = Decimal(entry['amount'])
+            # Directly use the specified amount each borrower owes
+            amount_per_borrower = Decimal(entry['amount'])
             lender = entry['lender']
             activity = entry['activity']
             for borrower in entry['borrower']:
                 if borrower != lender:  # Ignore if borrower is also the lender
-                    key = (borrower, lender)
-                    debts[key] += amount
+                    key = (borrower, lender, activity)  # Include activity in key to distinguish different activities
+                    debts[key] += amount_per_borrower
+                    # Store activity name in activity_info dictionary
                     activity_info[key] = activity
 
     # Prepare data for DataFrame
     debts_list = [
-        {'Lender': lender, 'Borrower': borrower, 'Amount': amt, 'Activity': activity_info[(borrower, lender)]}
-        for (borrower, lender), amt in debts.items()
+        {'Lender': key[1], 'Borrower': key[0], 'Amount': amt, 'Activity': activity_info[key]}
+        for key, amt in debts.items()
     ]
     return pd.DataFrame(debts_list)
 
 def data_visualization_page():
-    st.title("📝 Group Expense Visualization")
+    st.title("📝 Expense Visualization")
 
     # Dropdown to select the group
     group_names = get_group_names()
@@ -792,6 +796,14 @@ def data_visualization_page():
                     debts_df = all_debts_df
 
                 # Display the DataFrame
+                st.markdown(
+                    """
+                    <style>
+                    .stDataFrame {width: 100%;}
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
                 st.dataframe(debts_df)
 
                 # Additional feature: Summary of amounts owed by and to the selected name

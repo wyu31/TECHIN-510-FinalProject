@@ -27,5 +27,35 @@
             "Ann"
         ],
         "amount": 13.33
+    },
+    {
+        "activity": "snacks",
+        "activity_amount": 50,
+        "lender": "Ann",
+        "borrower": [
+            "John",
+            "Alice"
+        ],
+        "amount": 16.67
+    },
+    {
+        "activity": "water",
+        "activity_amount": 10,
+        "lender": "Alice",
+        "borrower": [
+            "John",
+            "Ann"
+        ],
+        "amount": 3.33
+    },
+    {
+        "activity": "dinner",
+        "activity_amount": 140,
+        "lender": "Ann",
+        "borrower": [
+            "Alice",
+            "John"
+        ],
+        "amount": 46.67
     }
 ]
