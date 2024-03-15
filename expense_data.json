@@ -1,22 +1,17 @@
 [
     {
-        "Group ID": "7585",
-        "Group Name": "banana",
-        "File": "individual_group_info/banana_expense_data.json"
-    },
-    {
         "Group ID": "8593",
         "Group Name": "sunday",
         "File": "individual_group_info/sunday_expense_data.json"
     },
     {
-        "Group ID": "6009",
+        "Group ID": "1808",
         "Group Name": "hiking",
         "File": "individual_group_info/hiking_expense_data.json"
     },
     {
-        "Group ID": "2645",
-        "Group Name": "cycling",
-        "File": "individual_group_info/cycling_expense_data.json"
+        "Group ID": "3006",
+        "Group Name": "lucky",
+        "File": "individual_group_info/lucky_expense_data.json"
     }
 ]

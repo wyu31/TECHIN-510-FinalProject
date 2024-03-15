@@ -1,0 +1,19 @@
+[
+    {
+        "Group ID": "3006",
+        "Group Name": "lucky",
+        "Participants": [
+            "Kevin",
+            "Steven"
+        ]
+    },
+    {
+        "activity": "lunch",
+        "activity_amount": 70,
+        "lender": "Kevin",
+        "borrower": [
+            "Steven"
+        ],
+        "amount": 35
+    }
+]

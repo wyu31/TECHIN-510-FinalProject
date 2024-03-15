@@ -174,7 +174,7 @@ def create_group_page():
         unsafe_allow_html=True,
     )
 
-    st.markdown("<div class='custom-subheading'>Add Group and Member</div>", unsafe_allow_html=True)
+    st.markdown("<div class='custom-subheading'>New Additions</div>", unsafe_allow_html=True)
     st.markdown('<div class="white-block"></div>', unsafe_allow_html=True)
 
     # Define the back button icon
@@ -386,7 +386,7 @@ def show_group_page():
         ),
         unsafe_allow_html=True,
     )
-    st.markdown("<div class='custom-subheading'>View Existing Groups</div>", unsafe_allow_html=True)
+    st.markdown("<div class='custom-subheading'>Existing Groups</div>", unsafe_allow_html=True)
     st.markdown('<div class="white-block"></div>', unsafe_allow_html=True)
 
     back_icon_path = "icon/Back.png"  # Make sure the path is correct
@@ -617,7 +617,7 @@ def chat_and_process_expenses_page():
             st.chat_message("assistant").write(msg)
 
     # Add a text area for users to paste the JSON data
-    json_input = st.text_area("Paste and check the generated JSON data here:", height=150)
+    json_input = st.text_area("Paste and check the generated JSON data here:", height=120)
     
     
     # Save button to save the pasted JSON data
@@ -809,6 +809,9 @@ def data_visualization_page():
     else:
         st.error("No groups found. Please create a group first.")
 
+    # Placeholder
+    for _ in range(1):  # Adjust the range for more or fewer spaces
+        st.text("")
 
     # Save button to save the pasted JSON data
     if st.button("Go back view existing groups"):
@@ -835,10 +838,6 @@ def data_visualization_page():
             </script>
         """
         components.html(htmlstr, height=0, width=0)
-
-    # Placeholder
-    for _ in range(4):  # Adjust the range for more or fewer spaces
-        st.text("")
     
     ChangeButtonColour('Go back AI accountant', 'white', '#b4aedf') 
     if st.button("Go back AI accountant", key ='b7'):

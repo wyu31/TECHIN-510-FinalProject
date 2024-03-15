@@ -1,20 +1,31 @@
 [
     {
-        "Group ID": "6009",
+        "Group ID": "1808",
         "Group Name": "hiking",
         "Participants": [
-            "wanling",
-            "qianna"
+            "Alice",
+            "John",
+            "Ann"
         ]
     },
     {
-        "activity": "dinner",
-        "activity_amount": 70,
-        "lender": "Wanling",
+        "activity": "breakfast",
+        "activity_amount": 50,
+        "lender": "John",
         "borrower": [
-            "Wanling",
-            "Qianna"
+            "Alice",
+            "Ann"
         ],
-        "amount": 35
+        "amount": 16.67
+    },
+    {
+        "activity": "renting stocks",
+        "activity_amount": 40,
+        "lender": "Alice",
+        "borrower": [
+            "John",
+            "Ann"
+        ],
+        "amount": 13.33
     }
 ]
