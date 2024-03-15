@@ -6,12 +6,16 @@ Thanks to Jackie, Wanling & Qianna.
 OttyMool🦦 
 
 ## Description
-OttyMool is a comprehensive web application tailored to manage group expenses, especially for travel seamlessly. 
+OttyMool is a comprehensive web application tailored to manage group expenses, especially for travel seamlessly.  
+Its UI is designed to adapt to mobile screens. And this is the UI screeenshot in use:  
+![Image of the UI](images/UI_in_use.jpg)
+
 
 ## Web app link:
 https://510-finalproject.azurewebsites.net/
 
 ## Youtube link: 
+https://www.youtube.com/watch?v=_TIRUSo8270
 
 ## Problem Statement
 The main problem OttyMool addresses is the complexity of managing group expenses, especially during travel. Traditional methods of tracking shared expenses are often cumbersome and prone to errors, leading to potential conflicts among group members. OttyMool aims to simplify this process by providing a platform where expenses can be entered in human language, which will be then saved in JSON format by OpenAI, and be further visualized and summarized in detailed reports dynamically.
@@ -51,6 +55,8 @@ streamlit run app.py
 2. Expense entries in conversational language.
 3. Using Streamlit with .css to create a user-friendly interface and a robust backend.
 4. Designing dynamic visualizations to represent the fund flow situation among group members.
+5. The current OpenAI Prompt learning and answering focus on every consumption being equally divided, and we hope to have greater freedom in the future.
+6. The back_icon at the left top will slide on the mobile devices, which is not happened with PC website, which can be further defined and solved.
 
 **Challenges Faced**
 1. Ensuring that the natural language processing accurately interprets and structures the expense entries.
